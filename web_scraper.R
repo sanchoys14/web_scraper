@@ -66,9 +66,12 @@ parse_dictionary <- function(dict) {
 
 
 # _ in front of verbs
-dict <- c('tijd', 'nu', 'moment', 'laat', 'lang', 
-          'klok', 'uur', 'kwartier', 'kwart', 'minuut', 
-          'middag', 'nacht', 'middernacht', 'ochtend')
+dict <- c('', '', '', '', '', 
+          '', '', '', '', '', 
+          '', '', '', '', '', 
+          '', '', '', '', '', 
+          '', '', '', '', '', 
+          '', '', '', '', '')
 
 r <- parse_dictionary(dict)
 
