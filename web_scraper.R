@@ -50,8 +50,8 @@ parse_dictionary <- function(dict) {
         html_attr('href') 
       
       if(is.na(s)) {
-        errors <<- c(errors, 'audio')
-        browser()
+        #errors <<- c(errors, 'audio') # This doesn't work
+        assign('errors', c(errors, 'audio'))
       } else {
         download.file(glue('https:{s}'), glue('speach/{w}.ogg'), mode = 'wb')
       }
@@ -108,20 +108,5 @@ r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
-
-# Fix this error
-t <- function() {
-  errors <- F
-  
-  if(T) {
-    if(T) {
-      errors <<- T
-    }
-  }
-  
-  return(errors)
-}
-
-t()
 
 
