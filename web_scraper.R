@@ -3,8 +3,6 @@ library(lubridate)
 library(glue)
 library(rvest)
 
-# [Done] Remove line breaks after verbs and add a break before
-# [Done] Handle 404 errors
 parse_dictionary <- function(dict) {
   
   r <- tibble()
@@ -28,10 +26,20 @@ parse_dictionary <- function(dict) {
     
     if(is.na(woorden)) {
       t <- NA
+      a <- NA
     } else {
       t <- woorden %>%
         html_node('a.help') %>%
         html_text()
+      
+      a <- woorden %>%
+        html_nodes('.inline font') %>%
+        html_text() %>%
+        .[. %in% c('de ', 'het ')] %>%
+        .[1]
+      
+      if(is.na(a)) a <- ''
+        
     }
     
     if(is.na(wiktionary)) {
@@ -41,7 +49,12 @@ parse_dictionary <- function(dict) {
         html_node('a.internal') %>%
         html_attr('href') 
       
-      download.file(glue('https:{s}'), glue('speach/{w}.ogg'), mode = 'wb')
+      if(is.na(s)) {
+        errors <<- c(errors, 'audio')
+        browser()
+      } else {
+        download.file(glue('https:{s}'), glue('speach/{w}.ogg'), mode = 'wb')
+      }
     }
     
     c <- ''
@@ -64,7 +77,7 @@ parse_dictionary <- function(dict) {
     }
     
     cr <- tibble(front = w,
-                back = glue('{w}\n[{t}]\n{c}'))
+                back = glue('{a}{w}\n[{t}]\n{c}'))
     
     r <- r %>%
       rbind(cr)
@@ -88,10 +101,27 @@ parse_dictionary <- function(dict) {
   return(r)
 }
 
-
 # _ in front of a verb
-dict <- c('t-shirt', '_dragen')
+dict <- c('richting', '_hangen', 'leven')
 
 r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
+
+
+# Fix this error
+t <- function() {
+  errors <- F
+  
+  if(T) {
+    if(T) {
+      errors <<- T
+    }
+  }
+  
+  return(errors)
+}
+
+t()
+
+
