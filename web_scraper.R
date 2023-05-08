@@ -27,6 +27,7 @@ parse_dictionary <- function(dict) {
     if(is.na(woorden)) {
       t <- NA
       a <- NA
+      pl <- NA
     } else {
       t <- woorden %>%
         html_node('a.help') %>%
@@ -39,6 +40,15 @@ parse_dictionary <- function(dict) {
         .[1]
       
       if(is.na(a)) a <- ''
+      
+      pl <- woorden %>%
+        html_node('table') %>%
+        html_table() %>%
+        filter(str_detect(X2, '(meerv.)')) %>%
+        mutate(pl = str_replace(X2, ' \\(meerv\\.\\)', '')) %>%
+        .$pl
+      
+      if(length(pl) == 0) pl <- '' else pl <- glue('\n\ntwee {pl}')
         
     }
     
@@ -77,7 +87,7 @@ parse_dictionary <- function(dict) {
     }
     
     cr <- tibble(front = w,
-                back = glue('{a}{w}\n[{t}]\n{c}'))
+                back = glue('{a}{w}\n[{t}]\n{c}{pl}'))
     
     r <- r %>%
       rbind(cr)
