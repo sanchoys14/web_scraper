@@ -28,6 +28,7 @@ parse_dictionary <- function(dict) {
       t <- NA
       a <- NA
       pl <- NA
+      ref <- NA
     } else {
       t <- woorden %>%
         html_node('a.help') %>%
@@ -49,6 +50,12 @@ parse_dictionary <- function(dict) {
         .$pl
       
       if(length(pl) == 0) pl <- '' else pl <- glue('\n\ntwee {pl}')
+      
+      ref <- woorden %>%
+        html_node('h2 i') %>%
+        html_text() == 'zich'
+      
+      ref <- ifelse(replace_na(ref, F), 'zich ', '')
         
     }
     
@@ -76,18 +83,36 @@ parse_dictionary <- function(dict) {
       if(is.na(mijnwoordenboek)) {
         c <- NA
       } else {
+        
+        # Past participle
+        pp <- mijnwoordenboek %>%
+          html_nodes('td') %>%
+          html_text2() %>%
+          .[3] %>%
+          str_replace('\\n', '')
+        
+        # Past participle conjugations
+        pp_c <- mijnwoordenboek %>%
+          html_nodes('td') %>%
+          html_text2() %>%
+          .[7]
+        
+        # Finite verb for past participle: 'zijn' or 'hebben'
+        fv <- if (str_detect(pp_c, 'zijn')) 'zijn ' else 'hebben '
+        
+        # Conjugations
         c <- mijnwoordenboek %>%
           html_nodes('td') %>%
           html_text2() %>%
           .[5] %>%
           str_replace('\\n\\n$', '')
         
-        c <- glue('\n\n{c}')
+        c <- glue('\n\n{fv}{pp}{c}')
       }
     }
     
     cr <- tibble(front = w,
-                back = glue('{a}{w}\n[{t}]\n{c}{pl}'))
+                back = glue('{ref}{a}{w}\n[{t}]\n{c}{pl}'))
     
     r <- r %>%
       rbind(cr)
@@ -112,7 +137,7 @@ parse_dictionary <- function(dict) {
 }
 
 # _ in front of a verb
-dict <- c('richting', '_hangen', 'leven')
+dict <- c('_zijn')
 
 r <- parse_dictionary(dict)
 
