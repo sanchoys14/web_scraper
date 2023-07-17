@@ -183,9 +183,18 @@ parse_dictionary <- function(dict) {
 }
 
 # _ in front of a verb
-dict <- c('_zijn', '_schikken')
+dict <- c('_beginnen', '_bedriegen', '_bewijzen', '_bidden', 
+          '_blazen', '_blijken', '_breken', '_dwingen', 
+          '_ervaren', '_genezen', '_glijden', '_heten', 
+          '_klimmen', '_liegen', '_lijden', '_lijken', 
+          '_meedoen', '_mislukken', '_schelden', '_schieten', 
+          '_schrikken', '_slaan', '_springen', '_stelen', 
+          '_sterven', '_stinken', '_verdwijnen', '_verstaan', 
+          '_verzinnen', '_vliegen', '_wrijven', '_zenden', 
+          '_zuipen', '_zwemmen', '_zwijgen')
 
 r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
+# problem with "ten slotte", "schrikken", ["glijden", "opstaan", "rijden"] (wrong past tense)
