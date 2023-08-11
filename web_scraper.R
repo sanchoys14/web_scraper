@@ -10,10 +10,22 @@ parse_dictionary <- function(dict) {
   
   for(word in dict) {
     
-    p <- case_when(str_detect(word, '^_') ~ 'v',
+    trans_and_context <- str_extract(word, '(?<=\\[).*(?=\\])')
+    trans <- str_trim(str_split(trans_and_context, ';')[[1]][1])
+    context <- str_trim(str_split(trans_and_context, ';')[[1]][2])
+    # w_origin <- str_extract(word, '[a-zA-Z\'-_]+(?=\\[)')
+    # context <- str_replace(word, '(\\[.*\\])|(_)', '')
+    # context_m <- str_replace(context, w_origin, '...')
+    # context_m <- glue('{context_m} ({trans})')
+    
+    w <- str_extract(word, '[a-zA-Z\'-_]+(?=\\[)')
+    
+    p <- case_when(str_detect(w, '^_') ~ 'v',
                    T ~ 'n')
     
-    w <- trim(str_replace(word, '_', ''))
+    w <- trim(str_replace(w, '_', ''))
+    
+    #if(context == w) context <- ''
     
     wiktionary_url <- glue('https://nl.wiktionary.org/wiki/{w}')
     woorden_url <- glue('https://www.woorden.org/woord/{w}')
@@ -52,6 +64,8 @@ parse_dictionary <- function(dict) {
           .[. %in% c('de ', 'het ')] %>%
           .[1] %>%
           replace_na(., '')
+        
+        if(p == 'v') a <- ''
         
         pl <- woorden %>%
           html_node('table')
@@ -157,8 +171,8 @@ parse_dictionary <- function(dict) {
       }
     }
     
-    cr <- tibble(front = w,
-                back = glue('{ref}{a}{w}\n[{t}]\n{c}{pl}'))
+    cr <- tibble(front = trans,
+                back = glue('{ref}{a}{w} ({trans})\n[{t}]\n\n{context}\n{c}{pl}'))
     
     r <- r %>%
       rbind(cr)
@@ -182,19 +196,15 @@ parse_dictionary <- function(dict) {
   return(r)
 }
 
-# _ in front of a verb
-dict <- c('_beginnen', '_bedriegen', '_bewijzen', '_bidden', 
-          '_blazen', '_blijken', '_breken', '_dwingen', 
-          '_ervaren', '_genezen', '_glijden', '_heten', 
-          '_klimmen', '_liegen', '_lijden', '_lijken', 
-          '_meedoen', '_mislukken', '_schelden', '_schieten', 
-          '_schrikken', '_slaan', '_springen', '_stelen', 
-          '_sterven', '_stinken', '_verdwijnen', '_verstaan', 
-          '_verzinnen', '_vliegen', '_wrijven', '_zenden', 
-          '_zuipen', '_zwemmen', '_zwijgen')
+dict <- c('_voorstellen[to suggests; Martin stelt voor om het aan Marieke te vragen]', 'tenminste[at least; Ik zou tenminste drie redenen willen noemen.]', 'aanbod[offer; Wij gaan je een aanbod doen. Een mooi aanbod accepteren]', '_accepteren[to accept; Wij gaan je een aanbod doen. Een mooi aanbod accepteren]', 'meteen[immediately, right away; Ze wil hem alles meteen vertellen. Meteen een dokter bellen]', '_raden[to guess; Je mag drie keer raden hoe oud ik ben. Je raadt het nooit!]', 'kaars[candle; Hij heeft overal kaarsjes geplaatst.]', 'zonde[shame, sin; Niet weggooien! Dat is zonde! (=waste) Iemand zijn zonden vergeven.]', 'uitvinding[invention; Nederlandse uitvindingen]', 'onbekend[unknown; Het is onbekend wie de telescoop als eerste heeft ontdekt: Sacharias Jansen of Hans Lipperhey.]', 'bewegen[to move; Leer je bewegen. Het was de eerste boot ter wereld die onder water kon bewegen.]', '_testen[to test; Tussen 1620 en 1624 testte Cornelius Drebbel de eerste onderzeeboot op de Theems.]', '_oprollen[to roll up; Het vloerkleed oprollen. Een mug doodslaan met een opgerolde krant.]', '_bedenken[to come up with; een plan bedenken. Jan bedacht een manier om water uit de gracht te pompen. We zouden naar de film gaan, maar we hebben ons bedacht (=have second thoughts, change ones mind)]', 'eeuw[century; twintigste eeuw]', 'boete[fine, ticket; Rijd je weleens te hard? Dan is de kans groot dat je wordt geflitst en een boete krijgt.]', '_overlijden[to pass away; overlijden aan kanker]')
 
 r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
 # problem with "ten slotte", "schrikken", ["glijden", "opstaan", "rijden"] (wrong past tense)
+# add ability to hide multiple (separable) words
+# add default option of the word i.e.: opstaan[; get up] = opstaan[opstaan; get up]
+
+
+
