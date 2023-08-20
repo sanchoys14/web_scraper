@@ -2,6 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(glue)
 library(rvest)
+library(av)
 
 parse_dictionary <- function(dict) {
   
@@ -111,7 +112,14 @@ parse_dictionary <- function(dict) {
         #errors <<- c(errors, 'no audio') # This doesn't work
         assign('errors', c(errors, 'no audio'))
       } else {
+        # Download original .ogg file
         download.file(glue('https:{s}'), glue('speach/{w}.ogg'), mode = 'wb')
+        
+        # Convert .ogg to .mp3
+        av_audio_convert(glue('speach/{w}.ogg'), glue('speach/{w}.mp3'))
+        
+        # Delete original .ogg file
+        unlink(glue('speach/{w}.ogg'))
       }
     }
     
@@ -146,14 +154,19 @@ parse_dictionary <- function(dict) {
                         T ~ 'hebben ')
         
         # Simple past tense
+        td_lag <- mijnwoordenboek %>%
+          html_nodes('td') %>%
+          html_text2() %>%
+          lag() %>%
+          replace_na('')
+        
         sp <- mijnwoordenboek %>%
           html_nodes('td') %>%
           html_text2() %>%
-          .[9] %>%
+          .[str_detect(td_lag, 'Onvoltooid verleden tijd')] %>%
           strsplit(., '\n') %>%
           .[[1]] %>%
           .[str_detect(., 'ik|wij')]
-          #str_replace_all(., 'ik |wij ', '')
         
         sp <- ifelse(length(sp) == 2, glue('\n{paste(sp, collapse = " (")})\n\n\n'), '')
         
@@ -196,15 +209,11 @@ parse_dictionary <- function(dict) {
   return(r)
 }
 
-dict <- c('_voorstellen[to suggests; Martin stelt voor om het aan Marieke te vragen]', 'tenminste[at least; Ik zou tenminste drie redenen willen noemen.]', 'aanbod[offer; Wij gaan je een aanbod doen. Een mooi aanbod accepteren]', '_accepteren[to accept; Wij gaan je een aanbod doen. Een mooi aanbod accepteren]', 'meteen[immediately, right away; Ze wil hem alles meteen vertellen. Meteen een dokter bellen]', '_raden[to guess; Je mag drie keer raden hoe oud ik ben. Je raadt het nooit!]', 'kaars[candle; Hij heeft overal kaarsjes geplaatst.]', 'zonde[shame, sin; Niet weggooien! Dat is zonde! (=waste) Iemand zijn zonden vergeven.]', 'uitvinding[invention; Nederlandse uitvindingen]', 'onbekend[unknown; Het is onbekend wie de telescoop als eerste heeft ontdekt: Sacharias Jansen of Hans Lipperhey.]', 'bewegen[to move; Leer je bewegen. Het was de eerste boot ter wereld die onder water kon bewegen.]', '_testen[to test; Tussen 1620 en 1624 testte Cornelius Drebbel de eerste onderzeeboot op de Theems.]', '_oprollen[to roll up; Het vloerkleed oprollen. Een mug doodslaan met een opgerolde krant.]', '_bedenken[to come up with; een plan bedenken. Jan bedacht een manier om water uit de gracht te pompen. We zouden naar de film gaan, maar we hebben ons bedacht (=have second thoughts, change ones mind)]', 'eeuw[century; twintigste eeuw]', 'boete[fine, ticket; Rijd je weleens te hard? Dan is de kans groot dat je wordt geflitst en een boete krijgt.]', '_overlijden[to pass away; overlijden aan kanker]')
+dict <- c('_schrikken[to glide; schrikken')
 
 r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
-# problem with "ten slotte", "schrikken", ["glijden", "opstaan", "rijden"] (wrong past tense)
-# add ability to hide multiple (separable) words
-# add default option of the word i.e.: opstaan[; get up] = opstaan[opstaan; get up]
-
-
+# problem with "ten slotte", "schrikken"
 
