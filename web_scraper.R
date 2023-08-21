@@ -160,13 +160,13 @@ parse_dictionary <- function(dict) {
           lag() %>%
           replace_na('')
         
-        sp <- mijnwoordenboek %>%
+        conj_list <- mijnwoordenboek %>%
           html_nodes('td') %>%
           html_text2() %>%
           .[str_detect(td_lag, 'Onvoltooid verleden tijd')] %>%
-          strsplit(., '\n') %>%
-          .[[1]] %>%
-          .[str_detect(., 'ik|wij')]
+          strsplit(., '\n')
+        
+        if(length(conj_list) == 0) sp <- '' else sp <- conj_list[[1]] %>% .[str_detect(., 'ik|wij')]
         
         sp <- ifelse(length(sp) == 2, glue('\n{paste(sp, collapse = " (")})\n\n\n'), '')
         
@@ -209,11 +209,12 @@ parse_dictionary <- function(dict) {
   return(r)
 }
 
-dict <- c('_schrikken[to glide; schrikken')
+dict <- read_csv('words.csv')$word
+
+dict
 
 r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
 # problem with "ten slotte", "schrikken"
-
