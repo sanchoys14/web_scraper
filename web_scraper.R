@@ -19,18 +19,32 @@ parse_dictionary <- function(dict) {
     # context_m <- str_replace(context, w_origin, '...')
     # context_m <- glue('{context_m} ({trans})')
     
-    w <- str_extract(word, '[a-zA-Z\'-_]+(?=\\[)')
+    w <- str_extract(word, '[a-zA-Z\'-_@ ]+(?=\\[)')
     
-    p <- case_when(str_detect(w, '^_') ~ 'v',
+    p <- case_when(str_detect(w, '^_') ~ 'v', # verb
+                   str_detect(w, '^@') ~ 'p', # phrase
                    T ~ 'n')
     
-    w <- trim(str_replace(w, '_', ''))
+    w <- trim(str_replace(w, '_|@', ''))
     
-    #if(context == w) context <- ''
+    # if a word is a phrase
+    if(p == 'p') {
+      cr <- tibble(front = trans,
+                   back = glue('{context}'))
+      
+      r <- r %>%
+        rbind(cr)
+      
+      status <- '✓'
+      print(glue('{i}. {w} {status}'))
+      i <- i + 1
+      
+      next
+    }
     
-    wiktionary_url <- glue('https://nl.wiktionary.org/wiki/{w}')
-    woorden_url <- glue('https://www.woorden.org/woord/{w}')
-    mijnwoordenboek_url <- glue('https://www.mijnwoordenboek.nl/werkwoord/{w}')
+    wiktionary_url <- glue('https://nl.wiktionary.org/wiki/{str_replace_all(w, " ", "_")}')
+    woorden_url <- glue('https://www.woorden.org/woord/{str_replace_all(w, " ", "%20")}')
+    mijnwoordenboek_url <- glue('https://www.mijnwoordenboek.nl/werkwoord/{str_replace_all(w, " ", "+")}')
     
     errors <- ''
     
@@ -68,19 +82,25 @@ parse_dictionary <- function(dict) {
         
         if(p == 'v') a <- ''
         
-        pl <- woorden %>%
-          html_node('table')
+        pls <- woorden %>%
+          html_nodes('table')
         
-        if(is.na(pl)) {
-          pl <- ''
-        } else {
-          pl <- pl %>%
-            html_table() %>%
-            filter(str_detect(X2, '(meerv.)')) %>%
-            mutate(pl = str_replace(X2, ' \\(meerv\\.\\)', '')) %>%
-            .$pl
+        pl <- ''
+        
+        if(length(pls) > 0) {
+          for(j in 1:length(pls)) {
+            if(str_detect(pls[[j]] %>% html_text(), ' \\(meerv\\.\\)')) {
+              pl <- pls[[j]] %>%
+                html_table() %>%
+                filter(str_detect(X2, '(meerv.)')) %>%
+                mutate(pl = str_replace(X2, ' \\(meerv\\.\\)', '')) %>%
+                .$pl
+              
+              break
+            }
+          }
           
-          if(length(pl) == 0) pl <- '' else pl <- glue('\n\ntwee {pl}')
+          if(pl != '') pl <- glue('\n\ntwee {pl}')
         }
         
         ref <- woorden %>%
@@ -185,7 +205,7 @@ parse_dictionary <- function(dict) {
     }
     
     cr <- tibble(front = trans,
-                back = glue('{ref}{a}{w} ({trans})\n[{t}]\n\n{context}\n{c}{pl}'))
+                 back = glue('{ref}{a}{w} ({trans})\n[{t}]\n\n{context}\n{c}{pl}'))
     
     r <- r %>%
       rbind(cr)
@@ -211,10 +231,7 @@ parse_dictionary <- function(dict) {
 
 dict <- read_csv('words.csv')$word
 
-dict
-
 r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
-# problem with "ten slotte", "schrikken"
