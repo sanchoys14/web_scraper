@@ -12,13 +12,8 @@ parse_dictionary <- function(dict) {
   for(word in dict) {
     
     trans_and_context <- str_extract(word, '(?<=\\[).*(?=\\])')
-    trans <- str_trim(str_split(trans_and_context, ';')[[1]][1])
-    context <- str_trim(str_split(trans_and_context, ';')[[1]][2])
-    # w_origin <- str_extract(word, '[a-zA-Z\'-_]+(?=\\[)')
-    # context <- str_replace(word, '(\\[.*\\])|(_)', '')
-    # context_m <- str_replace(context, w_origin, '...')
-    # context_m <- glue('{context_m} ({trans})')
-    
+    trans <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][1]), '')
+    context <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][2]), '')
     w <- str_extract(word, '[a-zA-Z\'-_@ ]+(?=\\[)')
     
     p <- case_when(str_detect(w, '^_') ~ 'v', # verb
@@ -29,8 +24,9 @@ parse_dictionary <- function(dict) {
     
     # if a word is a phrase
     if(p == 'p') {
+      context <- ifelse(context == '', '', glue('\n\n\n{context}'))
       cr <- tibble(front = trans,
-                   back = glue('{context}'))
+                   back = glue('{w}{context}'))
       
       r <- r %>%
         rbind(cr)
@@ -234,4 +230,5 @@ dict <- read_csv('words.csv')$word
 r <- parse_dictionary(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
+
 
