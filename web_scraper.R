@@ -4,7 +4,7 @@ library(glue)
 library(rvest)
 library(av)
 
-parse_dictionary <- function(dict) {
+parse_dictionary_nl <- function(dict) {
   
   r <- tibble()
   i <- 1
@@ -225,9 +225,89 @@ parse_dictionary <- function(dict) {
   return(r)
 }
 
+parse_dictionary_pl <- function(dict) {
+  
+  r <- tibble()
+  i <- 1
+  
+  for(word in dict) {
+    
+    trans_and_context <- str_extract(word, '(?<=\\[).*(?=\\])')
+    trans <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][1]), '')
+    context <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][2]), '')
+    w <- str_trim(str_extract(word, '[\\p{L}+\'-_@ ]+(?=\\[)'))
+    
+    p <- case_when(str_detect(w, '^_') ~ 'v', # verb
+                   str_detect(w, '^@') ~ 'p', # phrase
+                   T ~ 'n')
+    
+    w <- trim(str_replace(w, '_|@', ''))
+    
+    # if a word is a phrase
+    if(p == 'p') {
+      context <- ifelse(context == '', '', glue('\n\n\n{context}'))
+      cr <- tibble(front = trans,
+                   back = glue('{w}{context}'))
+      
+      r <- r %>%
+        rbind(cr)
+      
+      status <- '✓'
+      print(glue('{i}. {w} {status}'))
+      i <- i + 1
+      
+      next
+    }
+    
+    wiktionary_url <- glue('https://pl.wiktionary.org/wiki/{str_replace_all(w, " ", "_")}')
+    
+    errors <- ''
+    
+    wiktionary <- tryCatch(read_html(wiktionary_url), error = function(e){errors <<- c(errors, 'no audio'); return(NA)})
+    
+    if(is.na(wiktionary)) {
+      s <- NA
+    } else {
+      s <- wiktionary %>%
+        html_node('a.oo-ui-buttonElement-button') %>%
+        html_attr('href') 
+      
+      if(is.na(s)) {
+        assign('errors', c(errors, 'no audio'))
+      } else {
+        # Download original file. It might be .mp3 or .ogg, in both ways save it as .mp3
+        download.file(glue('https:{s}'), glue('speach/{w}.mp3'), mode = 'wb')
+      }
+    }
+    
+    cr <- tibble(front = trans,
+                 back = glue('{w}\n\n{context}'))
+    
+    r <- r %>%
+      rbind(cr)
+    
+    status <- ''
+    
+    if(length(errors) == 1) {
+      status <- '✓'
+    } else {
+      errors <- errors[errors != '']
+      errors <- paste(errors, collapse = ', ')
+      status <- glue('✗ ({errors})')
+    }
+    
+    
+    print(glue('{i}. {w} {status}'))
+    
+    i <- i + 1
+  }
+  
+  return(r)
+}
+
 dict <- read_csv('words.csv')$word
 
-r <- parse_dictionary(dict)
+r <- parse_dictionary_pl(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
