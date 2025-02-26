@@ -129,13 +129,13 @@ parse_dictionary_nl <- function(dict) {
         assign('errors', c(errors, 'no audio'))
       } else {
         # Download original .ogg file
-        download.file(glue('https:{s}'), glue('speach/{w}.ogg'), mode = 'wb')
+        download.file(glue('https:{s}'), glue('media/{w}.ogg'), mode = 'wb')
         
         # Convert .ogg to .mp3
-        av_audio_convert(glue('speach/{w}.ogg'), glue('speach/{w}.mp3'))
+        av_audio_convert(glue('media/{w}.ogg'), glue('media/{w}.mp3'))
         
         # Delete original .ogg file
-        unlink(glue('speach/{w}.ogg'))
+        unlink(glue('media/{w}.ogg'))
       }
     }
     
@@ -235,7 +235,7 @@ parse_dictionary_pl <- function(dict) {
     trans_and_context <- str_extract(word, '(?<=\\[).*(?=\\])')
     trans <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][1]), '')
     context <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][2]), '')
-    w <- str_trim(str_extract(word, '[\\p{L}+\'-_@ ]+(?=\\[)'))
+    w <- str_trim(str_extract(word, '[\\p{L}+\'\\-_@! ]+(?=\\[)'))
     
     p <- case_when(str_detect(w, '^_') ~ 'v', # verb
                    str_detect(w, '^@') ~ 'p', # phrase
@@ -263,11 +263,13 @@ parse_dictionary_pl <- function(dict) {
     
     errors <- ''
     
-    wiktionary <- tryCatch(read_html(wiktionary_url), error = function(e){errors <<- c(errors, 'no audio'); return(NA)})
+    wiktionary <- tryCatch(read_html(wiktionary_url), error = function(e){errors <<- c(errors, 'no wiktionary'); return(NA)})
     
     if(is.na(wiktionary)) {
       s <- NA
     } else {
+      
+      # Audio
       s <- wiktionary %>%
         html_node('a.oo-ui-buttonElement-button') %>%
         html_attr('href') 
@@ -276,7 +278,24 @@ parse_dictionary_pl <- function(dict) {
         assign('errors', c(errors, 'no audio'))
       } else {
         # Download original file. It might be .mp3 or .ogg, in both ways save it as .mp3
-        download.file(glue('https:{s}'), glue('speach/{w}.mp3'), mode = 'wb')
+        download.file(glue('https:{s}'), glue('media/{w}.mp3'), mode = 'wb')
+      }
+      
+      # Image
+      img_size <- wiktionary %>%
+        html_nodes('img.mw-file-element') %>%
+        html_attr('width') %>%
+        as.numeric()
+      
+      s <- wiktionary %>%
+        html_nodes('img.mw-file-element') %>%
+        html_attr('src') %>%
+        .[which(img_size > 200)[1]]
+      
+      if(is.na(s)) {
+        assign('errors', c(errors, 'no image'))
+      } else {
+        download.file(glue('https:{s}'), glue('media/{w}.jpg'), mode = 'wb')
       }
     }
     
@@ -305,10 +324,12 @@ parse_dictionary_pl <- function(dict) {
   return(r)
 }
 
-dict <- read_csv('words.csv')$word
+dict <- read_tsv('words.txt', col_names = F)$X1
 
 r <- parse_dictionary_pl(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
+
+
 
 
