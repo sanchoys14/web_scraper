@@ -297,10 +297,24 @@ parse_dictionary_pl <- function(dict) {
       } else {
         download.file(glue('https:{s}'), glue('media/{w}.jpg'), mode = 'wb')
       }
+      
+      # Gender (for nouns)
+      gender <- ''
+      if(p == 'n') {
+        l <- wiktionary %>%
+          html_nodes('p i') %>%
+          html_text()
+        
+        l1 <- l[str_detect(l, 'rodzaj (męski|żeński|nijaki)')][1]
+        
+        g <- str_extract(l1, 'rodzaj \\p{L}+')
+        
+        if(!is.na(g)) {gender <- glue('\n\n{g}')}
+      }
     }
     
     cr <- tibble(front = trans,
-                 back = glue('{w}\n\n{context}'))
+                 back = glue('{w} ({trans}){gender}\n\n{context}'))
     
     r <- r %>%
       rbind(cr)
@@ -331,5 +345,6 @@ r <- parse_dictionary_pl(dict)
 write_csv(r, 'dict.csv', col_names = F)
 
 
+# Ignores other genders (e.g. kluzh -- męskorzeczowy)
 
 
