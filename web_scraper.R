@@ -266,55 +266,105 @@ parse_dictionary_pl <- function(dict) {
     wiktionary <- tryCatch(read_html(wiktionary_url), error = function(e){errors <<- c(errors, 'no wiktionary'); return(NA)})
     
     if(is.na(wiktionary)) {
-      s <- NA
+      s <- NA # This is for case when p == 'n'
+      
+      # Do something for p == 'v'
     } else {
       
-      # Audio
-      s <- wiktionary %>%
-        html_node('a.oo-ui-buttonElement-button') %>%
-        html_attr('href') 
-      
-      if(is.na(s)) {
-        assign('errors', c(errors, 'no audio'))
-      } else {
-        # Download original file. It might be .mp3 or .ogg, in both ways save it as .mp3
-        download.file(glue('https:{s}'), glue('media/{w}.mp3'), mode = 'wb')
-      }
-      
-      # Image
-      img_size <- wiktionary %>%
-        html_nodes('img.mw-file-element') %>%
-        html_attr('width') %>%
-        as.numeric()
-      
-      s <- wiktionary %>%
-        html_nodes('img.mw-file-element') %>%
-        html_attr('src') %>%
-        .[which(img_size > 200)[1]]
-      
-      if(is.na(s)) {
-        assign('errors', c(errors, 'no image'))
-      } else {
-        download.file(glue('https:{s}'), glue('media/{w}.jpg'), mode = 'wb')
-      }
-      
-      # Gender (for nouns)
-      gender <- ''
-      if(p == 'n') {
-        l <- wiktionary %>%
-          html_nodes('p i') %>%
-          html_text()
+      # if a word is a verb
+      conj <- ''
+      if(p == 'v') {
         
-        l1 <- l[str_detect(l, 'rodzaj (męski|żeński|nijaki)')][1]
+        conj_dfs <- wiktionary %>%
+          html_table() 
         
-        g <- str_extract(l1, 'rodzaj \\p{L}+')
+        if(length(conj_dfs) == 0) {
+          # Do something
+        } else {
+          conj_df <- tibble()
+          
+          for(i in 1:length(conj_dfs)) {
+            if('forma' %in% colnames(conj_dfs[[i]])) {
+              conj_df <- conj_dfs %>%
+                .[[i]] %>%
+                .[,1:8]
+              
+              break
+            }
+          }
+          
+          if(length(conj_df) == 0) {
+            # Do something
+          } else {
+            colnames(conj_df) <- make.names(colnames(conj_df), unique = T)
+            
+            conj_v <- conj_df %>%
+              filter(forma %in% c('forma', 'czas teraźniejszy')) %>%
+              .[2,3:8] %>%
+              unlist(., use.names = F) %>%
+              str_extract(., '[\\p{L}+ \\/]+')
+            
+            if(length(conj_v) < 6) {
+              # Do something
+            } else {
+              conj <- glue('\n\nja {conj_v[1]}
+ty {conj_v[2]}
+on {conj_v[3]}
+my {conj_v[4]}
+wy {conj_v[5]}
+oni {conj_v[6]}')
+            }
+          }
+        }
+      } else { # Meaning when p == 'n'
         
-        if(!is.na(g)) {gender <- glue('\n\n{g}')}
+        # Audio
+        s <- wiktionary %>%
+          html_node('a.oo-ui-buttonElement-button') %>%
+          html_attr('href') 
+        
+        if(is.na(s)) {
+          assign('errors', c(errors, 'no audio'))
+        } else {
+          # Download original file. It might be .mp3 or .ogg, in both ways save it as .mp3
+          download.file(glue('https:{s}'), glue('media/{w}.mp3'), mode = 'wb')
+        }
+        
+        # Image
+        img_size <- wiktionary %>%
+          html_nodes('img.mw-file-element') %>%
+          html_attr('width') %>%
+          as.numeric()
+        
+        s <- wiktionary %>%
+          html_nodes('img.mw-file-element') %>%
+          html_attr('src') %>%
+          .[which(img_size > 200)[1]]
+        
+        if(is.na(s)) {
+          assign('errors', c(errors, 'no image'))
+        } else {
+          download.file(glue('https:{s}'), glue('media/{w}.jpg'), mode = 'wb')
+        }
+        
+        # Gender (for nouns)
+        gender <- ''
+        if(p == 'n') {
+          l <- wiktionary %>%
+            html_nodes('p i') %>%
+            html_text()
+          
+          l1 <- l[str_detect(l, 'rodzaj (męski|żeński|nijaki)')][1]
+          
+          g <- str_extract(l1, 'rodzaj \\p{L}+')
+          
+          if(!is.na(g)) {gender <- glue('\n\n{g}')}
+        }
       }
-    }
+    } 
     
     cr <- tibble(front = trans,
-                 back = glue('{w} ({trans}){gender}\n\n{context}'))
+                 back = glue('{w} ({trans}){gender}\n\n{context}{conj}'))
     
     r <- r %>%
       rbind(cr)
@@ -340,11 +390,14 @@ parse_dictionary_pl <- function(dict) {
 
 dict <- read_tsv('words.txt', col_names = F)$X1
 
+dict <- c('lekcja [lesson;]', '@hellow worlds [ss;]', '_wiedzieć[..;]')
+
 r <- parse_dictionary_pl(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
 
 # Ignores other genders (e.g. kluzh -- męskorzeczowy)
+# Handle errors when a word is a verbs
 
 
