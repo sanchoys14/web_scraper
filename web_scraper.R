@@ -354,9 +354,9 @@ oni {conj_v[6]}')
             html_nodes('p i') %>%
             html_text()
           
-          l1 <- l[str_detect(l, 'rodzaj (męski|żeński|nijaki)')][1]
+          l1 <- l[str_detect(l, 'rodzaj (męskorzeczowy|męskoosobowy|męski|żeński|nijaki)')][1]
           
-          g <- str_extract(l1, 'rodzaj \\p{L}+')
+          g <- str_extract(str_replace(l1, 'męskorzeczowy|męskoosobowy', 'męski'), 'rodzaj \\p{L}+')
           
           if(!is.na(g)) {gender <- glue('\n\n{g}')}
         }
@@ -390,14 +390,12 @@ oni {conj_v[6]}')
 
 dict <- read_tsv('words.txt', col_names = F)$X1
 
-dict <- c('lekcja [lesson;]', '@hellow worlds [ss;]', '_wiedzieć[..;]')
-
 r <- parse_dictionary_pl(dict)
 
 write_csv(r, 'dict.csv', col_names = F)
 
 
-# Ignores other genders (e.g. kluzh -- męskorzeczowy)
 # Handle errors when a word is a verbs
+# Index dropped to 1 in the middle of the procces -- WTF?
 
 
