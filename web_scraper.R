@@ -228,14 +228,14 @@ parse_dictionary_nl <- function(dict) {
 parse_dictionary_pl <- function(dict) {
   
   r <- tibble()
-  i <- 1
+  word_index <- 1
   
   for(word in dict) {
-    
+
     trans_and_context <- str_extract(word, '(?<=\\[).*(?=\\])')
     trans <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][1]), '')
     context <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][2]), '')
-    w <- str_trim(str_extract(word, '[\\p{L}+\'\\-_@! ]+(?=\\[)'))
+    w <- str_trim(str_extract(word, '[\\p{L}\\d\'\\-_@!: ]+(?=\\[)'))
     
     p <- case_when(str_detect(w, '^_') ~ 'v', # verb
                    str_detect(w, '^@') ~ 'p', # phrase
@@ -253,8 +253,8 @@ parse_dictionary_pl <- function(dict) {
         rbind(cr)
       
       status <- '✓'
-      print(glue('{i}. {w} {status}'))
-      i <- i + 1
+      print(glue('{word_index}. {w} {status}'))
+      word_index <- word_index + 1
       
       next
     }
@@ -270,6 +270,35 @@ parse_dictionary_pl <- function(dict) {
       
       # Do something for p == 'v'
     } else {
+      
+      # Audio
+      s <- wiktionary %>%
+        html_node('a.oo-ui-buttonElement-button') %>%
+        html_attr('href') 
+      
+      if(is.na(s)) {
+        assign('errors', c(errors, 'no audio'))
+      } else {
+        # Download original file. It might be .mp3 or .ogg, in both ways save it as .mp3
+        download.file(glue('https:{s}'), glue('media/{w}.mp3'), mode = 'wb')
+      }
+      
+      # Image
+      img_size <- wiktionary %>%
+        html_nodes('img.mw-file-element') %>%
+        html_attr('width') %>%
+        as.numeric()
+      
+      s <- wiktionary %>%
+        html_nodes('img.mw-file-element') %>%
+        html_attr('src') %>%
+        .[which(img_size > 200)[1]]
+      
+      if(is.na(s)) {
+        assign('errors', c(errors, 'no image'))
+      } else {
+        download.file(glue('https:{s}'), glue('media/{w}.jpg'), mode = 'wb')
+      }
       
       # if a word is a verb
       conj <- ''
@@ -318,35 +347,6 @@ oni {conj_v[6]}')
         }
       } else { # Meaning when p == 'n'
         
-        # Audio
-        s <- wiktionary %>%
-          html_node('a.oo-ui-buttonElement-button') %>%
-          html_attr('href') 
-        
-        if(is.na(s)) {
-          assign('errors', c(errors, 'no audio'))
-        } else {
-          # Download original file. It might be .mp3 or .ogg, in both ways save it as .mp3
-          download.file(glue('https:{s}'), glue('media/{w}.mp3'), mode = 'wb')
-        }
-        
-        # Image
-        img_size <- wiktionary %>%
-          html_nodes('img.mw-file-element') %>%
-          html_attr('width') %>%
-          as.numeric()
-        
-        s <- wiktionary %>%
-          html_nodes('img.mw-file-element') %>%
-          html_attr('src') %>%
-          .[which(img_size > 200)[1]]
-        
-        if(is.na(s)) {
-          assign('errors', c(errors, 'no image'))
-        } else {
-          download.file(glue('https:{s}'), glue('media/{w}.jpg'), mode = 'wb')
-        }
-        
         # Gender (for nouns)
         gender <- ''
         if(p == 'n') {
@@ -379,10 +379,9 @@ oni {conj_v[6]}')
       status <- glue('✗ ({errors})')
     }
     
+    print(glue('{word_index}. {w} {status}'))
     
-    print(glue('{i}. {w} {status}'))
-    
-    i <- i + 1
+    word_index <- word_index + 1
   }
   
   return(r)
@@ -396,6 +395,10 @@ write_csv(r, 'dict.csv', col_names = F)
 
 
 # Handle errors when a word is a verbs
-# Index dropped to 1 in the middle of the procces -- WTF?
+
+
+w <- 'pływać'
+wiktionary_url <- glue('https://pl.wiktionary.org/wiki/{str_replace_all(w, " ", "_")}')
+wiktionary <- tryCatch(read_html(wiktionary_url), error = function(e){errors <<- c(errors, 'no wiktionary'); return(NA)})
 
 
