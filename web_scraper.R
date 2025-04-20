@@ -304,6 +304,9 @@ parse_dictionary_pl <- function(dict) {
       conj <- ''
       if(p == 'v') {
         
+        gender <- ''
+        context <- ifelse(context == '', '', glue('{context}\n\n'))
+        
         conj_dfs <- wiktionary %>%
           html_table() 
         
@@ -328,12 +331,12 @@ parse_dictionary_pl <- function(dict) {
             colnames(conj_df) <- make.names(colnames(conj_df), unique = T)
             
             conj_v <- conj_df %>%
-              filter(forma %in% c('forma', 'czas teraźniejszy')) %>%
+              filter(forma %in% c('forma', 'czas teraźniejszy', 'czas przyszły prosty')) %>% # what if we have both teraźniejszy and przyszły?
               .[2,3:8] %>%
               unlist(., use.names = F) %>%
               str_extract(., '[\\p{L}+ \\/]+')
             
-            if(length(conj_v) < 6) {
+            if(length(conj_v) != 6) {
               # Do something
             } else {
               conj <- glue('\n\nja {conj_v[1]}
@@ -395,10 +398,5 @@ write_csv(r, 'dict.csv', col_names = F)
 
 
 # Handle errors when a word is a verbs
-
-
-w <- 'pływać'
-wiktionary_url <- glue('https://pl.wiktionary.org/wiki/{str_replace_all(w, " ", "_")}')
-wiktionary <- tryCatch(read_html(wiktionary_url), error = function(e){errors <<- c(errors, 'no wiktionary'); return(NA)})
 
 
