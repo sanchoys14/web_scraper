@@ -245,7 +245,7 @@ parse_dictionary_pl <- function(dict) {
     
     # if a word is a phrase
     if(p == 'p') {
-      context <- ifelse(context == '', '', glue('\n\n\n{context}'))
+      context <- ifelse(context == '', '', glue('<br><br>{context}'))
       cr <- tibble(front = trans,
                    back = glue('{w}{context}'))
       
@@ -272,15 +272,18 @@ parse_dictionary_pl <- function(dict) {
     } else {
       
       # Audio
-      s <- wiktionary %>%
+      audio_source <- wiktionary %>%
         html_node('a.oo-ui-buttonElement-button') %>%
         html_attr('href') 
       
-      if(is.na(s)) {
+      audio <- '<br>'
+      
+      if(is.na(audio_source)) {
         assign('errors', c(errors, 'no audio'))
       } else {
         # Download original file. It might be .mp3 or .ogg, in both ways save it as .mp3
-        download.file(glue('https:{s}'), glue('media/{w}.mp3'), mode = 'wb')
+        download.file(glue('https:{audio_source}'), glue('media/{w}.mp3'), mode = 'wb')
+        assign('audio', glue('[sound:{w}.mp3]<br>'))
       }
       
       # Image
@@ -289,15 +292,18 @@ parse_dictionary_pl <- function(dict) {
         html_attr('width') %>%
         as.numeric()
       
-      s <- wiktionary %>%
+      image_source <- wiktionary %>%
         html_nodes('img.mw-file-element') %>%
         html_attr('src') %>%
         .[which(img_size > 200)[1]]
       
-      if(is.na(s)) {
+      image <- ''
+      
+      if(is.na(image_source)) {
         assign('errors', c(errors, 'no image'))
       } else {
-        download.file(glue('https:{s}'), glue('media/{w}.jpg'), mode = 'wb')
+        download.file(glue('https:{image_source}'), glue('media/{w}.jpg'), mode = 'wb')
+        assign('image', glue('<img src="{w}.jpg"><br>'))
       }
       
       # if a word is a verb
@@ -305,7 +311,7 @@ parse_dictionary_pl <- function(dict) {
       if(p == 'v') {
         
         gender <- ''
-        context <- ifelse(context == '', '', glue('{context}\n\n'))
+        context <- ifelse(context == '', '', glue('{context}<br>'))
         
         conj_dfs <- wiktionary %>%
           html_table() 
@@ -339,11 +345,11 @@ parse_dictionary_pl <- function(dict) {
             if(length(conj_v) != 6) {
               # Do something
             } else {
-              conj <- glue('\n\nja {conj_v[1]}
-ty {conj_v[2]}
-on {conj_v[3]}
-my {conj_v[4]}
-wy {conj_v[5]}
+              conj <- glue('<br>ja {conj_v[1]}<br>
+ty {conj_v[2]}<br>
+on {conj_v[3]}<br>
+my {conj_v[4]}<br>
+wy {conj_v[5]}<br>
 oni {conj_v[6]}')
             }
           }
@@ -361,13 +367,13 @@ oni {conj_v[6]}')
           
           g <- str_extract(str_replace(l1, 'męskorzeczowy|męskoosobowy', 'męski'), 'rodzaj \\p{L}+')
           
-          if(!is.na(g)) {gender <- glue('\n\n{g}')}
+          if(!is.na(g)) {gender <- glue('<br>{g}')}
         }
       }
     } 
     
-    cr <- tibble(front = trans,
-                 back = glue('{w} ({trans}){gender}\n\n{context}{conj}'))
+    cr <- tibble(front = glue('{image}{trans}'),
+                 back = glue('{w} ({trans}){gender}<br>{audio}{context}{conj}'))
     
     r <- r %>%
       rbind(cr)
@@ -394,9 +400,9 @@ dict <- read_tsv('words.txt', col_names = F)$X1
 
 r <- parse_dictionary_pl(dict)
 
+# %APPDATA%\Anki2
 write_csv(r, 'dict.csv', col_names = F)
 
-
 # Handle errors when a word is a verbs
-
+# problem with obserwować 
 
