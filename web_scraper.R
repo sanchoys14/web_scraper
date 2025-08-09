@@ -261,6 +261,8 @@ parse_dictionary_pl <- function(dict) {
     
     wiktionary_url <- glue('https://pl.wiktionary.org/wiki/{str_replace_all(w, " ", "_")}')
     
+    audio <- '<br>'
+    image <- ''
     errors <- ''
     
     wiktionary <- tryCatch(read_html(wiktionary_url), error = function(e){errors <<- c(errors, 'no wiktionary'); return(NA)})
@@ -274,9 +276,7 @@ parse_dictionary_pl <- function(dict) {
       # Audio
       audio_source <- wiktionary %>%
         html_node('a.oo-ui-buttonElement-button') %>%
-        html_attr('href') 
-      
-      audio <- '<br>'
+        html_attr('href')
       
       if(is.na(audio_source)) {
         assign('errors', c(errors, 'no audio'))
@@ -296,8 +296,6 @@ parse_dictionary_pl <- function(dict) {
         html_nodes('img.mw-file-element') %>%
         html_attr('src') %>%
         .[which(img_size > 200)[1]]
-      
-      image <- ''
       
       if(is.na(image_source)) {
         assign('errors', c(errors, 'no image'))
