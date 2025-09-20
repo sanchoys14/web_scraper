@@ -233,13 +233,30 @@ parse_dictionary_pl <- function(dict) {
   for(word in dict) {
 
     trans_and_context <- str_extract(word, '(?<=\\[).*(?=\\])')
-    trans <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][1]), '')
-    context <- replace_na(str_trim(str_split(trans_and_context, ';')[[1]][2]), '')
+    trans <- replace_na(str_trim(str_split_1(trans_and_context, ';')[1]), '')
+    context <- replace_na(str_trim(str_split_1(trans_and_context, ';')[2]), '')
+    
+    cloze <- NA_character_
+    if(!is.na(context) & context != '') {
+      for(context_sentence in str_split_1(context, '\\.')) {
+        if(!str_detect(context_sentence, '\\{\\p{L}+\\}')) next
+        
+        cloze <- str_replace(str_trim(context_sentence), '\\{\\p{L}+\\}', glue('{{{trans}}}'))
+        print(cloze)
+      }
+    }
+    
+    context <- str_replace_all(context, '[\\{\\}]', '')
+    
     w <- str_trim(str_extract(word, '[\\p{L}\\d\'\\-_@!: ]+(?=\\[)'))
     
     p <- case_when(str_detect(w, '^_') ~ 'v', # verb
                    str_detect(w, '^@') ~ 'p', # phrase
                    T ~ 'n')
+    
+    if(!is.na(context) & context != '') {
+      
+    }
     
     w <- trim(str_replace(w, '_|@', ''))
     
@@ -370,7 +387,7 @@ oni {conj_v[6]}')
       }
     } 
     
-    cr <- tibble(front = glue('{image}{trans}'),
+    cr <- tibble(front = glue('{image}{if(is.na(cloze)) trans else cloze}'),
                  back = glue('{w} ({trans}){gender}<br>{audio}{context}{conj}'))
     
     r <- r %>%
@@ -401,6 +418,9 @@ r <- parse_dictionary_pl(dict)
 # %APPDATA%\Anki2
 write_csv(r, 'dict.csv', col_names = F)
 
+# Try https://wsjp.pl/haslo/podglad/39383/wydarzyc-sie
+# Or https://aztekium.pl/odmiana.py?site=1&szukaj=wymienia%C4%87&lang=cs&kod=&rek=t
+
 # Handle errors when a word is a verbs
-# problem with obserwować 
+
 
